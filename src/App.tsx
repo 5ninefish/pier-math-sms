@@ -23,6 +23,70 @@ const pages: { id: Page; label: string }[] = [
 ];
 
 const audienceOptions = ["All subscribers", ...keywords.filter((k) => k.active).map((k) => k.code)];
+const knownKeywords = new Set(keywords.map((item) => item.code.toUpperCase()));
+
+type SheetRow = { name: string; phone: string; keyword: string };
+type SkippedRow = { line: number; reason: string; raw: string };
+
+function splitRow(line: string, delimiter: string): string[] {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (quoted && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (char === delimiter && !quoted) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function readSheet(text: string): { accepted: SheetRow[]; skipped: SkippedRow[] } {
+  const source = text.replace(/^\uFEFF/, "");
+  const lines = source.split(/\r?\n/);
+  const filled = lines
+    .map((line, index) => ({ line: line.trim(), number: index + 1 }))
+    .filter((item) => item.line.length > 0);
+  const delimiter = filled.some((item) => item.line.includes("\t")) ? "\t" : ",";
+  const accepted: SheetRow[] = [];
+  const skipped: SkippedRow[] = [];
+  let headerSkipped = false;
+
+  filled.forEach((item) => {
+    const cells = splitRow(item.line, delimiter);
+    const labels = cells.map((cell) => cell.toLowerCase());
+    if (!headerSkipped && labels.includes("phone") && (labels.includes("name") || labels.includes("keyword"))) {
+      headerSkipped = true;
+      return;
+    }
+    const name = cells[0] ?? "";
+    const phone = cells[1] ?? "";
+    const keywordCell = (cells[2] ?? "").trim();
+    if (!phone) {
+      skipped.push({ line: item.number, reason: "Missing phone", raw: item.line });
+      return;
+    }
+    const keyword = keywordCell ? keywordCell.toUpperCase() : "JOIN";
+    if (!knownKeywords.has(keyword)) {
+      skipped.push({ line: item.number, reason: `Unknown keyword ${keyword}`, raw: item.line });
+      return;
+    }
+    accepted.push({ name, phone, keyword });
+  });
+
+  return { accepted, skipped };
+}
 
 function statusClass(status: ContactStatus | CampaignStatus) {
   if (status === "Active" || status === "Delivered") return "bg-emerald-50 text-emerald-700 ring-emerald-600/15";
@@ -88,6 +152,9 @@ export default function App() {
   const [draftPhone, setDraftPhone] = useState("");
   const [draftKeyword, setDraftKeyword] = useState("JOIN");
   const [addError, setAddError] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [sheetPaste, setSheetPaste] = useState("");
+  const [skippedRows, setSkippedRows] = useState<SkippedRow[]>([]);
 
   const q = query.trim().toLowerCase();
   const title = pages.find((item) => item.id === page)?.label ?? "Dashboard";
@@ -116,6 +183,34 @@ export default function App() {
     setPage(next);
     setNavOpen(false);
     setNotice("");
+  }
+
+  function importSheet(text: string) {
+    const { accepted, skipped } = readSheet(text);
+    if (accepted.length === 0 && skipped.length === 0) {
+      setSkippedRows([]);
+      setNotice("That sheet had no rows. Use columns name, phone, and keyword.");
+      return;
+    }
+    if (accepted.length > 0) {
+      const stamp = Date.now();
+      setPeople((current) => [
+        ...accepted.map((row, index) => ({
+          id: `import-${stamp}-${index}`,
+          name: row.name,
+          phone: row.phone,
+          keyword: row.keyword,
+          joined: "Nov 25, 2026",
+          status: "Active" as const,
+        })),
+        ...current,
+      ]);
+    }
+    setSkippedRows(skipped);
+    setSheetPaste("");
+    const added = `${accepted.length} ${accepted.length === 1 ? "family" : "families"} added in this browser only.`;
+    const held = skipped.length > 0 ? ` ${skipped.length} ${skipped.length === 1 ? "row was" : "rows were"} skipped.` : "";
+    setNotice(`${added}${held} No texts were sent.`);
   }
 
   function sendMessage() {
@@ -272,12 +367,19 @@ export default function App() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                   <div>
                     <h2 className="text-sm font-semibold">Subscribers</h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Families usually join by texting JOIN. Use Add subscriber when they enrolled and did not text.
+                    <p className="mt-1 max-w-xl text-xs text-slate-500">
+                      Families usually join by texting JOIN. Add one family, or import a sheet with name, phone, and keyword.
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <p className="text-xs text-slate-500">{filteredContacts.length} shown</p>
+                    <button
+                      type="button"
+                      onClick={() => setImportOpen((open) => !open)}
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      Import spreadsheet
+                    </button>
                     <button
                       type="button"
                       onClick={() => setAddOpen((open) => !open)}
@@ -287,6 +389,59 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                {importOpen && (
+                  <form
+                    className="space-y-3 border-b border-slate-100 bg-slate-50 px-5 py-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      importSheet(sheetPaste);
+                    }}
+                  >
+                    <p className="text-sm text-slate-600">
+                      Columns are name, phone, keyword. A header row is fine. Leave keyword blank to use JOIN. Paste from
+                      Sheets or Excel, or choose a CSV file.
+                    </p>
+                    <textarea
+                      value={sheetPaste}
+                      onChange={(event) => setSheetPaste(event.target.value)}
+                      rows={5}
+                      placeholder={"Name\tPhone\tKeyword\nMaya Chen\t(808) 555-0148\tJOIN"}
+                      aria-label="Spreadsheet paste"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm outline-none ring-indigo-500 focus:ring-2"
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+                        Choose CSV
+                        <input
+                          type="file"
+                          accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
+                          className="sr-only"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (!file) return;
+                            void file.text().then((text) => importSheet(text));
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                      >
+                        Import paste
+                      </button>
+                    </div>
+                    {skippedRows.length > 0 && (
+                      <ul className="space-y-1 text-sm text-rose-700" role="status">
+                        {skippedRows.map((row) => (
+                          <li key={`${row.line}-${row.raw}`}>
+                            Line {row.line}: {row.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </form>
+                )}
                 {addOpen && (
                   <form
                     className="grid gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4 sm:grid-cols-[1fr_1fr_140px_auto]"
