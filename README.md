@@ -1,0 +1,10 @@
+# Peak SMS staff dashboard
+
+Static preview of an SMS marketing staff console. Mock data only. Nothing is sent, and there is no login.
+
+```bash
+npm install
+npm run dev
+```
+
+Published with GitHub Pages from `main`. Cloudflare Pages was not available: the connected token returns HTTP 403 on the Pages projects API, and Wrangler is not logged in.
