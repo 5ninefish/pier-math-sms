@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 import {
   activity as seedActivity,
   campaigns as seedCampaigns,
-  contacts,
+  contacts as seedContacts,
   familyCount,
   keywords,
   stats,
   type Campaign,
   type CampaignStatus,
+  type Contact,
   type ContactStatus,
 } from "./data";
 
@@ -81,16 +82,22 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [keywordNote, setKeywordNote] = useState(false);
   const [history, setHistory] = useState<Campaign[]>(seedCampaigns);
+  const [people, setPeople] = useState<Contact[]>(seedContacts);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [draftPhone, setDraftPhone] = useState("");
+  const [draftKeyword, setDraftKeyword] = useState("JOIN");
+  const [addError, setAddError] = useState("");
 
   const q = query.trim().toLowerCase();
   const title = pages.find((item) => item.id === page)?.label ?? "Dashboard";
 
   const filteredContacts = useMemo(
     () =>
-      contacts.filter((person) =>
+      people.filter((person) =>
         [person.name, person.phone, person.keyword, person.status].join(" ").toLowerCase().includes(q),
       ),
-    [q],
+    [people, q],
   );
   const filteredKeywords = useMemo(
     () => keywords.filter((item) => `${item.code} ${item.reply}`.toLowerCase().includes(q)),
@@ -207,11 +214,11 @@ export default function App() {
             </label>
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium">Alex Reyes</p>
+                <p className="text-sm font-medium">Dalen Kahiapo</p>
                 <p className="text-xs text-slate-500">Staff</p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-                AR
+                DK
               </div>
             </div>
           </header>
@@ -262,10 +269,96 @@ export default function App() {
 
             {page === "contacts" && (
               <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-sm font-semibold">Subscribers</h2>
-                  <p className="text-xs text-slate-500">{filteredContacts.length} shown</p>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                  <div>
+                    <h2 className="text-sm font-semibold">Subscribers</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Families usually join by texting JOIN. Use Add subscriber when they enrolled and did not text.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xs text-slate-500">{filteredContacts.length} shown</p>
+                    <button
+                      type="button"
+                      onClick={() => setAddOpen((open) => !open)}
+                      className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
+                      Add subscriber
+                    </button>
+                  </div>
                 </div>
+                {addOpen && (
+                  <form
+                    className="grid gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4 sm:grid-cols-[1fr_1fr_140px_auto]"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const name = draftName.trim();
+                      const phone = draftPhone.trim();
+                      if (!name || !phone) {
+                        setAddError("Enter a name and a phone number.");
+                        return;
+                      }
+                      setAddError("");
+                      setPeople((current) => [
+                        {
+                          id: `local-${Date.now()}`,
+                          name,
+                          phone,
+                          keyword: draftKeyword,
+                          joined: "Nov 25, 2026",
+                          status: "Active",
+                        },
+                        ...current,
+                      ]);
+                      setDraftName("");
+                      setDraftPhone("");
+                      setAddOpen(false);
+                      setNotice(`${name} is on the list in this browser only. No welcome text was sent.`);
+                    }}
+                  >
+                    <input
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      placeholder="Parent or guardian"
+                      aria-label="Name"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-indigo-500 focus:ring-2"
+                    />
+                    <input
+                      value={draftPhone}
+                      onChange={(event) => setDraftPhone(event.target.value)}
+                      placeholder="(808) 555-0100"
+                      aria-label="Phone"
+                      inputMode="tel"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-indigo-500 focus:ring-2"
+                    />
+                    <select
+                      value={draftKeyword}
+                      onChange={(event) => setDraftKeyword(event.target.value)}
+                      aria-label="Keyword source"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-indigo-500 focus:ring-2"
+                    >
+                      {keywords.filter((item) => item.active).map((item) => (
+                        <option key={item.code}>{item.code}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                    >
+                      Save
+                    </button>
+                    {addError && (
+                      <p className="text-sm text-rose-600 sm:col-span-4" role="status">
+                        {addError}
+                      </p>
+                    )}
+                  </form>
+                )}
+                {notice && page === "contacts" && (
+                  <p className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800" role="status">
+                    {notice}
+                  </p>
+                )}
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
                     <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">

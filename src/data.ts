@@ -135,7 +135,7 @@ export const campaigns: Campaign[] = [
 export const activity: Activity[] = [
   { id: "a1", time: "8 min ago", title: "Maya Chen joined", detail: "Texted JOIN to the PIER-Math number" },
   { id: "a2", time: "34 min ago", title: "DAY reminder delivered", detail: "51 families · Fun room plan" },
-  { id: "a3", time: "2 hr ago", title: "HELP reply edited", detail: "Office hours line updated by Alex Reyes" },
+  { id: "a3", time: "2 hr ago", title: "HELP reply edited", detail: "Office hours line updated by Dalen Kahiapo" },
   { id: "a4", time: "Yesterday", title: "Welcome text scheduled", detail: "JOIN · Nov 26 · 58 families" },
   { id: "a5", time: "Yesterday", title: "Chris Dalton opted out", detail: "STOP received on the JOIN list" },
   { id: "a6", time: "Nov 18", title: "List notice sent", detail: "All subscribers · 64 families" },
