@@ -1,6 +1,6 @@
-# Peak SMS staff dashboard
+# PIER-Math staff texts
 
-Static preview of an SMS marketing staff console. Mock data only. Nothing is sent, and there is no login.
+Static preview of a family-text console for the PIER-Math program. Mock data only. Nothing is sent, and there is no login.
 
 ```bash
 npm install

@@ -3,6 +3,7 @@ import {
   activity as seedActivity,
   campaigns as seedCampaigns,
   contacts,
+  familyCount,
   keywords,
   stats,
   type Campaign,
@@ -74,9 +75,9 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [navOpen, setNavOpen] = useState(false);
   const [message, setMessage] = useState(
-    "Weekend drop is live through Sunday. Show this text at either shop for 15% off one full-price item.",
+    "PIER-Math Tier 1 is five in-person days for students finishing grade 6: Fun, Beautiful, Yummy, Alive, and Home.",
   );
-  const [audience, setAudience] = useState("DEALS");
+  const [audience, setAudience] = useState("JOIN");
   const [notice, setNotice] = useState("");
   const [keywordNote, setKeywordNote] = useState(false);
   const [history, setHistory] = useState<Campaign[]>(seedCampaigns);
@@ -117,7 +118,7 @@ export default function App() {
       return;
     }
     const match = keywords.find((item) => item.code === audience);
-    const recipients = audience === "All subscribers" ? 12486 : (match?.subscribers ?? 0);
+    const recipients = audience === "All subscribers" ? familyCount : (match?.subscribers ?? 0);
     const next: Campaign = {
       id: `local-${Date.now()}`,
       date: "Nov 25, 2026",
@@ -150,11 +151,11 @@ export default function App() {
         >
           <div className="flex items-center gap-3 px-5 py-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm">
-              PS
+              PM
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight">Peak SMS</p>
-              <p className="text-xs text-slate-500">Staff Dashboard</p>
+              <p className="text-sm font-semibold tracking-tight">PIER-Math</p>
+              <p className="text-xs text-slate-500">Staff texts</p>
             </div>
           </div>
           <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Primary">
@@ -176,7 +177,7 @@ export default function App() {
             })}
           </nav>
           <div className="m-3 rounded-2xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">
-            Preview only. No texts leave this page, and subscriber rows are sample data.
+            Preview only. Sample PIER-Math families. No texts leave this page.
           </div>
         </aside>
 
@@ -308,7 +309,7 @@ export default function App() {
             {page === "keywords" && (
               <section>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-slate-500">Keyword replies fire when someone texts the word to the shop number.</p>
+                  <p className="text-sm text-slate-500">Keyword replies fire when a family texts the word to the PIER-Math number.</p>
                   <button
                     type="button"
                     onClick={() => setKeywordNote(true)}
@@ -403,7 +404,7 @@ export default function App() {
                 <aside className="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm">
                   <p className="text-xs font-medium tracking-wide text-slate-400 uppercase">Phone preview</p>
                   <div className="mt-4 rounded-2xl bg-slate-800 p-4">
-                    <p className="text-xs text-slate-400">Peak Outdoor</p>
+                    <p className="text-xs text-slate-400">PIER-Math</p>
                     <p className="mt-2 text-sm leading-6 text-slate-100">{message.trim() || "Your message will show here."}</p>
                   </div>
                   <p className="mt-4 text-sm text-slate-300">To {audience}</p>
