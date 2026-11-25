@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
@@ -31,5 +32,19 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      - name: Wait until the Pages artifact is listed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            count=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" --jq '[.artifacts[] | select(.name=="github-pages" and .expired==false)] | length')
+            echo "attempt $i count=$count"
+            if [ "$count" != "0" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Pages artifact was never listed"
+          exit 1
       - id: deployment
         uses: actions/deploy-pages@v4
